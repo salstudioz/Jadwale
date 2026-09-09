@@ -25,12 +25,12 @@ export default function BrandLogo({
         <img
           src="/logo-light.png"
           alt="Jadwale Logo"
-          className={`${heightClass} w-auto object-contain dark:hidden transition-opacity`}
+          className={`${heightClass} w-auto object-contain logo-light-mode dark:hidden transition-opacity`}
         />
         <img
           src="/logo-dark.png"
           alt="Jadwale Logo"
-          className={`${heightClass} w-auto object-contain hidden dark:block transition-opacity`}
+          className={`${heightClass} w-auto object-contain logo-dark-mode hidden dark:block transition-opacity`}
         />
       </div>
     </div>

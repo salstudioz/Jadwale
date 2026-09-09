@@ -1,6 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Fail-proof Logo Dark/Light Mode Switcher */
+html:not(.dark) .logo-light-mode {
+  display: block !important;
+}
+html:not(.dark) .logo-dark-mode {
+  display: none !important;
+}
+html.dark .logo-light-mode {
+  display: none !important;
+}
+html.dark .logo-dark-mode {
+  display: block !important;
+}
+
 
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;

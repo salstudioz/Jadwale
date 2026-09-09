@@ -21,6 +21,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useLanguageStore, TRANSLATIONS } from '../store/useLanguageStore';
 import { useTheme } from 'next-themes';
 import LanguageToggle from './LanguageToggle';
+import BrandLogo from './BrandLogo';
 
 export default function MobilePageHeader() {
   const pathname = usePathname();
@@ -114,9 +115,7 @@ export default function MobilePageHeader() {
             style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 16px))' }}
           >
             <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-              <h3 className="font-extrabold text-base text-[var(--foreground)] flex items-center gap-2">
-                <User size={18} className="text-[var(--primary)]" /> {t.mobileMenuTitle}
-              </h3>
+              <BrandLogo href="/dashboard" size="sm" />
               <button
                 onClick={() => setMenuOpen(false)}
                 className="p-1 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--muted)]"

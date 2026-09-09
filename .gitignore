@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js
+.next/
+**/.next/
+out/
+
+# NestJS / Build
+dist/
+**/dist/
+build/
+
+# Logs & temp
+*.log
+generate_temaukpl.py
+~$*.docx
+*.pyc
+__pycache__/
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/

@@ -16,11 +16,15 @@ export const metadata: Metadata = {
     icon: [
       { url: '/logo-dark.png', media: '(prefers-color-scheme: dark)', type: 'image/png' },
       { url: '/logo-light.png', media: '(prefers-color-scheme: light)', type: 'image/png' },
-      { url: '/icon.png', type: 'image/png' },
-      { url: '/favicon.ico', type: 'image/x-icon' },
     ],
-    shortcut: '/favicon.ico',
-    apple: '/logo-light.png',
+    shortcut: [
+      { url: '/logo-dark.png', media: '(prefers-color-scheme: dark)', type: 'image/png' },
+      { url: '/logo-light.png', media: '(prefers-color-scheme: light)', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/logo-dark.png', media: '(prefers-color-scheme: dark)', type: 'image/png' },
+      { url: '/logo-light.png', media: '(prefers-color-scheme: light)', type: 'image/png' },
+    ],
   },
   openGraph: {
     title: "Jadwale — Generator & Pembuat Jadwal Pelajaran Sekolah Otomatis",

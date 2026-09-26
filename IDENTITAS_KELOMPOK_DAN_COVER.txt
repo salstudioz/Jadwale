@@ -1,0 +1,35 @@
+========================================================================
+PENGUMPULAN TUGAS PROGRESS PENGOLAHAN DATA UKPL (ISO/IEC 25010)
+SISTEM GENERATOR JADWAL PELAJARAN SEKOLAH OTOMATIS "JADWALE"
+========================================================================
+
+Disusun Oleh Kelompok:
+1. Salma Faizatul Jannah  (NIM: H1D024066)
+2. Nafisah Sekar Ayu      (NIM: H1D024087)
+3. Talitha Maharani Nashier (NIM: H1D024098)
+
+Mata Kuliah : Uji Kualitas Perangkat Lunak (UKPL)
+Standar     : ISO/IEC 25010 (Product Quality Model)
+Objek       : Sistem Jadwale (http://localhost:3000 & Staging Web)
+
+STRUKTUR ISI FOLDER ZIP INI:
+------------------------------------------------------------------------
+📁 01_LAPORAN_PROGRESS/
+   └── Laporan_Progress_UKPL_Jadwale_Real.docx
+       (Laporan progress resmi pengolahan data teknis real)
+
+📁 02_LAMPIRAN_LOG_DATA_REAL/
+   └── data_pengujian_teknis_real_jadwale.csv
+       (File CSV log hasil pengujian Functional, Performance API, & Reliability)
+
+📁 03_INSTRUMEN_KUESIONER_SUS/
+   └── Instrumen_Kuesioner_SUS_ISO25010.docx
+       (Draft instrumen kuesioner SUS 10-item yang siap disebar ke SD Mitra)
+
+📁 04_DOKUMEN_SKENARIO_TESTING/
+   └── Matriks_105_Test_Case_ISO25010.md
+       (Dokumen spesifikasi 105 skenario test case lengkap aplikasi Jadwale)
+
+📄 IDENTITAS_KELOMPOK_DAN_COVER.txt
+   (Ringkasan metadata pengumpulan tugas)
+------------------------------------------------------------------------

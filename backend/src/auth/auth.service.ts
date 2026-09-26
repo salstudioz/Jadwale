@@ -11,6 +11,9 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
+    if (!email || !pass) {
+      throw new UnauthorizedException('Email dan password harus diisi');
+    }
     const user = await this.prisma.user.findUnique({ 
       where: { email },
       include: { sekolah: true, guru: true }

@@ -2,25 +2,28 @@
 
 > Generator & Pembuat Jadwal Pelajaran Sekolah Otomatis Berbasis AI Constraint Satisfaction Problem (CSP).
 
-Aplikasi **Jadwale** dirancang untuk menyusun jadwal pelajaran sekolah (SD / SMP) secara otomatis tanpa bentrok antar guru, bentrok kelas, maupun pelanggaran slot waktu pembiasaan (seperti Sholat Berjamaah, Upacara, dan Istirahat).
+Aplikasi **Jadwale** dirancang untuk menyusun jadwal pelajaran sekolah (fokus utama SD) secara otomatis tanpa bentrok antar guru, bentrok kelas, maupun pelanggaran slot waktu kegiatan rutin (seperti Upacara Bendera Senin, Pembiasaan Pagi, dan Jam Istirahat).
 
 ---
 
 ## ✨ Fitur Utama
 
-- 🤖 **Otomatisasi Jadwal (CSP Engine)**: Menyusun jadwal pelajaran bebas bentrok secara otomatis dalam hitungan detik.
-- 🏫 **Manajemen Data Sekolah**: Kelola data sekolah, guru, kelas, mata pelajaran, dan alokasi jam mengajar.
-- 🔄 **Deteksi Registrasi Otomatis**: Deteksi role akun otomatis berdasarkan domain email (`.sch.id` untuk Admin Sekolah dan `guru.sd.belajar.id` untuk Tenaga Pendidik).
-- 🔗 **Share Link & Ekspor Data**: Bagikan jadwal publik via link read-only atau ekspor ke format PDF dan Excel.
-- 🌙 **Dark & Light Mode**: Dukungan penuh antarmuka mode gelap dan mode terang.
-- 📱 **Mobile & Desktop Friendly**: Tampilan responsif untuk Smartphone, Tablet, dan Desktop.
+- 🤖 **Otomatisasi Jadwal (CSP Engine)**: Menyusun jadwal pelajaran bebas bentrok secara otomatis dengan batasan ketat & rutinitas sekolah.
+- 🏫 **Setup Wizard & Manajemen Sekolah**: Panduan langkah demi langkah untuk profil sekolah, guru, kelas (1A-6B), mapel, dan pembagian jam mengajar (JP).
+- ☕ **Kegiatan Rutin & Istirahat**: Dukungan otomatisasi slot Upacara Bendera (Senin Pagi), Pembiasaan Pagi, dan Jam Istirahat.
+- 📄 **Ekspor & Cetak Jadwal**:
+  - **PDF & Excel (.xlsx)**: Unduh jadwal per kelas maupun gabungan seluruh 12 kelas SD.
+  - **Cetak Langsung (`@media print`)**: Tampilan bersih khusus printer / cetak browser.
+- 🔗 **Share Link Public**: Bagikan link jadwal publik (`/share/[uuid]`) yang dapat diakses guru/orang tua murid tanpa perlu login.
+- 📥 **Import Bulk Data**: Fitur upload data Guru, Kelas, Mapel & Pengampu via file Excel/CSV beserta template yang dapat diunduh.
+- 🔑 **Multi-Role & Restorasi Akun Demo**: Dukungan role Super Admin, Admin Sekolah, dan Guru.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 16 (App Router), TypeScript, TailwindCSS, Lucide Icons, Next Themes.
-- **Backend**: NestJS, TypeScript, Prisma ORM, SQLite / PostgreSQL.
+- **Frontend**: Next.js 15+, TypeScript, TailwindCSS, Lucide Icons, Axios, PDFMake.
+- **Backend**: NestJS, TypeScript, Prisma ORM, MySQL Database, Redis (BullQueue).
 - **Security**: JWT Authentication, Bcrypt Password Hashing, Role-Based Access Control (RBAC).
 
 ---
@@ -29,15 +32,18 @@ Aplikasi **Jadwale** dirancang untuk menyusun jadwal pelajaran sekolah (SD / SMP
 
 ### 1. Prasyarat
 - **Node.js**: v18.x atau lebih baru
-- **npm** / **yarn** / **pnpm**
+- **MySQL Database Server**: Port 3306 (atau via Laragon/XAMPP)
+- **Redis Server**: Port 6379 (opsional untuk antrean job generator)
 
 ### 2. Backend (NestJS)
 ```bash
 cd backend
 npm install
+npx prisma db push
+npx prisma db seed
 npm run start:dev
 ```
-> Server Backend berjalan pada `http://localhost:5000`
+> Server Backend berjalan pada `http://localhost:3001` (atau port yang dikonfigurasi).
 
 ### 3. Frontend (Next.js)
 ```bash
@@ -49,12 +55,18 @@ npm run dev
 
 ---
 
-## 🔑 Akun Default
+## 🔑 Akun Demo & Default
 
-- **Superadmin**: `superadmin@jadwale.id`
+- **Admin Sekolah (Demo Data SD)**:
+  - Email: `admin_final@sdnpancasila.sch.id`
+  - Password: `Password123!`
+- **Superadmin System**:
+  - Email: `superadmin@jadwale.id`
+  - Password: `Password123!`
 
 ---
 
 ## 📝 Lisensi
 
 Hak Cipta © 2026 **Jadwale Team**. All Rights Reserved.
+

@@ -49,7 +49,7 @@ export default function JadwalPage() {
   useEffect(() => {
     let socket: Socket;
     if (user?.id_sekolah && activeTab === 'generator') {
-      const socketUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, '') : 'http://localhost:3000';
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.trim().replace(/\/api\/?$/, '') : 'http://localhost:3000';
       socket = io(socketUrl);
       
       socket.on('connect', () => {

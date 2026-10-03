@@ -1,19 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Calendar as CalendarIcon, Loader2, Home } from 'lucide-react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { Calendar as CalendarIcon, Loader2, Home, Printer, Share2, MessageSquare, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import api from '../../../lib/axios';
-import { useLanguageStore, TRANSLATIONS } from '../../../store/useLanguageStore';
-import LanguageToggle from '../../../components/LanguageToggle';
-import { ThemeToggle } from '../../../components/ThemeToggle';
 
 export default function SharedJadwalPage() {
   const { uuid } = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const lang = useLanguageStore((s) => s.lang);
-  const t = TRANSLATIONS[lang] || TRANSLATIONS.id;
+  const queryClass = searchParams.get('kelas');
 
   const [jadwalData, setJadwalData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -23,44 +20,63 @@ export default function SharedJadwalPage() {
   useEffect(() => {
     const fetchSharedData = async () => {
       try {
-        const res = await api.get(`/jadwal/share/${uuid}`);
+        let res;
+        try {
+          res = await api.get(`/share/${uuid}`);
+        } catch {
+          res = await api.get(`/jadwal/share/${uuid}`);
+        }
+        
         setJadwalData(res.data);
 
-        // Auto-select first class
+        // Auto-select class
         if (res.data.jadwal && res.data.jadwal.length > 0) {
           const classes = Array.from(new Set(res.data.jadwal.map((j: any) => j.kelas?.nama_kelas || 'Umum')));
-          if (classes.length > 0) setSelectedClass(classes[0] as string);
+          if (queryClass && classes.includes(queryClass)) {
+            setSelectedClass(queryClass);
+          } else if (classes.length > 0) {
+            setSelectedClass(classes[0] as string);
+          }
         }
       } catch (err: any) {
-        if (err.response?.status === 401) {
-          setError('Akses ditolak: ' + (err.response?.data?.message || 'Membutuhkan login'));
-          if (err.response?.data?.message?.includes('login')) {
-            setTimeout(() => router.push('/login'), 3000);
-          }
-        } else {
-          setError('Gagal memuat jadwal. Link mungkin salah atau kadaluarsa.');
-        }
+        setError(err.response?.data?.message || 'Gagal memuat jadwal. Tautan mungkin salah atau telah kedaluwarsa.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSharedData();
-  }, [uuid, router]);
+    if (uuid) {
+      fetchSharedData();
+    }
+  }, [uuid, queryClass]);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-blue-700">
+          <Loader2 className="w-10 h-10 animate-spin" />
+          <p className="font-bold text-sm">Memuat Jadwal Pelajaran...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="bg-card border border-border p-8 rounded-xl max-w-md text-center">
-          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold">!</span>
+        <div className="bg-card border border-border p-8 rounded-2xl max-w-md w-full text-center shadow-lg">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-950/50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Akses Ditolak</h2>
-          <p className="text-foreground/70">{error}</p>
+          <h2 className="text-xl font-bold mb-2 text-foreground">Akses Ditolak / Tautan Kadaluarsa</h2>
+          <p className="text-muted-foreground text-sm mb-6">{error}</p>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm rounded-xl transition-colors w-full"
+          >
+            <Home size={16} />
+            Kembali ke Halaman Utama
+          </Link>
         </div>
       </div>
     );
@@ -68,31 +84,41 @@ export default function SharedJadwalPage() {
 
   if (!jadwalData) return null;
 
-  const { config, routines, jadwal } = jadwalData;
-  const dayNames = [t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday];
-  const days = Array.from({ length: config.school_days }).map((_, i) => dayNames[i] || `Hari ${i+1}`);
+  const { sekolah, config = {}, routines = [], jadwal = [] } = jadwalData;
+  const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const schoolDaysCount = config.school_days || 5;
+  const days = Array.from({ length: schoolDaysCount }).map((_, i) => dayNames[i] || `Hari ${i+1}`);
 
-  const groupedJadwal = jadwal.reduce((acc: any, curr: any) => {
-    const kls = curr.kelas?.nama_kelas || 'Umum';
+  const groupedJadwal = (jadwal || []).reduce((acc: any, curr: any) => {
+    const kls = curr.kelas?.kode_lengkap || curr.kelas?.nama_kelas || 'Umum';
     if (!acc[kls]) acc[kls] = [];
     acc[kls].push(curr);
     return acc;
   }, {});
+
   const classesList = Object.keys(groupedJadwal).sort();
 
+  // Matrix construction
   let matrixRows: any[] = [];
   const addMinutes = (dateStr: string, minutes: number) => {
     const d = new Date(dateStr);
-    d.setMinutes(d.getMinutes() + minutes);
+    d.setUTCMinutes(d.getUTCMinutes() + minutes);
     return d;
   };
-  const formatTime = (d: Date) => d.toISOString().substr(11, 5);
+  const formatTime = (d: Date) => {
+    const h = String(d.getUTCHours()).padStart(2, '0');
+    const m = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  };
 
-  let currentTime = new Date(config.start_time);
-  const maxJp = 10;
+  const rawStartTime = config.start_time || '1970-01-01T07:00:00.000Z';
+  let currentTime = new Date(rawStartTime);
+  const durationPerJp = config.duration_per_jp || 45;
+  const maxJamInSchedule = jadwal && jadwal.length > 0 ? Math.max(...jadwal.map((j: any) => j.jam_ke || 0)) : 0;
+  const maxJp = Math.max(6, Math.min(10, maxJamInSchedule || 8));
   let jpCounter = 1;
 
-  const prepRoutine = routines.find((r: any) => r.time_before_jp === 1);
+  const prepRoutine = (routines || []).find((r: any) => r.time_before_jp === 1);
   if (prepRoutine) {
     const end = addMinutes(currentTime.toISOString(), prepRoutine.duration);
     matrixRows.push({ type: 'routine', name: prepRoutine.name, waktu: `${formatTime(currentTime)} - ${formatTime(end)}` });
@@ -100,12 +126,12 @@ export default function SharedJadwalPage() {
   }
 
   for (let i = 1; i <= maxJp; i++) {
-    const end = addMinutes(currentTime.toISOString(), config.duration_per_jp);
+    const end = addMinutes(currentTime.toISOString(), durationPerJp);
     matrixRows.push({ type: 'jp', jam_ke: jpCounter, waktu: `${formatTime(currentTime)} - ${formatTime(end)}` });
     currentTime = end;
     jpCounter++;
 
-    const afterRoutine = routines.find((r: any) => r.time_before_jp === (i + 1));
+    const afterRoutine = (routines || []).find((r: any) => r.time_before_jp === (i + 1));
     if (afterRoutine) {
       const breakEnd = addMinutes(currentTime.toISOString(), afterRoutine.duration);
       matrixRows.push({ type: 'break', name: afterRoutine.name, waktu: `${formatTime(currentTime)} - ${formatTime(breakEnd)}` });
@@ -113,75 +139,138 @@ export default function SharedJadwalPage() {
     }
   }
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleWAShare = () => {
+    const url = window.location.href;
+    const msg = `*Jadwal Pelajaran ${sekolah?.nama || 'Sekolah'}*\nLihat jadwal terbaru melalui tautan ini:\n${url}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
   return (
-    <div className="min-h-screen bg-background pb-16 md:pb-0">
-      {/* Top Bar */}
-      <div className="bg-card border-b border-border shadow-sm p-4 sticky top-0 z-30 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">{t.publicScheduleTitle}</h1>
-            <p className="text-xs text-foreground/70">{t.publicLinkBadge}</p>
-          </div>
+    <div className="min-h-screen bg-background text-foreground pb-12">
+      
+      {/* Top Header */}
+      <header className="bg-card border-b border-border shadow-sm p-4 sticky top-0 z-30 print:hidden">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <LanguageToggle />
-            <ThemeToggle />
+            <div className="w-10 h-10 rounded-xl bg-blue-700 text-white flex items-center justify-center font-bold">
+              <CalendarIcon size={20} />
+            </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold text-foreground">
+                Jadwal Pelajaran — {sekolah?.nama || 'Sekolah'}
+              </h1>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                Mode Baca Publik (Aktif)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleWAShare}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+            >
+              <MessageSquare size={14} />
+              Bagikan WA
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-3 py-1.5 border border-border bg-card hover:bg-muted text-foreground rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+            >
+              <Printer size={14} />
+              Cetak
+            </button>
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-foreground/5 font-bold text-xs transition-colors"
+              className="px-3 py-1.5 border border-border bg-card hover:bg-muted text-foreground rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
             >
-              <Home size={14} className="text-primary" />
-              <span className="hidden sm:inline">{t.backToHome}</span>
+              <Home size={14} />
+              Beranda
             </Link>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto p-4 md:p-6 mt-4">
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Printable Header (Visible only when printing) */}
+        <div className="hidden print:block text-center border-b pb-4 mb-6">
+          <h1 className="text-2xl font-bold">{sekolah?.nama || 'Jadwal Pelajaran'}</h1>
+          <p className="text-sm">Jadwal Pelajaran Per Kelas</p>
+        </div>
+
         <div className="flex flex-col md:flex-row gap-6">
-          <div className="w-full md:w-64 shrink-0">
-            <div className="bg-card border border-border rounded-xl p-4">
-              <h3 className="font-bold border-b border-border pb-2 mb-3">{t.selectClass}</h3>
-              <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto">
+          
+          {/* Class Sidebar Selector */}
+          <div className="w-full md:w-60 shrink-0 print:hidden">
+            <div className="bg-card border border-border rounded-xl p-4 sticky top-20">
+              <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+                Pilih Kelas:
+              </h2>
+              <div className="flex md:flex-col gap-1.5 overflow-x-auto pb-2 md:pb-0 max-h-[60vh] overflow-y-auto">
                 {classesList.map(cls => (
                   <button
                     key={cls}
                     onClick={() => setSelectedClass(cls)}
-                    className={`text-left px-3 py-2 rounded-lg font-bold text-sm transition-colors border ${
+                    className={`text-left px-3.5 py-2 rounded-lg font-bold text-xs shrink-0 transition-all border ${
                       selectedClass === cls 
-                        ? 'bg-primary text-white border-primary' 
-                        : 'bg-background text-foreground/70 border-border'
+                        ? 'bg-blue-700 text-white border-blue-700 shadow-sm' 
+                        : 'bg-background hover:bg-muted text-muted-foreground border-border'
                     }`}
                   >
-                    {cls}
+                    Kelas {cls}
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
+          {/* Schedule Table Container */}
           <div className="flex-1">
-            <div className="bg-card border border-border rounded-xl p-4 md:p-6 overflow-hidden">
+            <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm overflow-hidden">
+              
               {!selectedClass ? (
-                <div className="text-center p-12"><CalendarIcon className="w-12 h-12 mx-auto text-foreground/20 mb-4"/>{t.selectClassPrompt}</div>
+                <div className="text-center py-16 text-muted-foreground">
+                  <CalendarIcon className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium">Silakan pilih kelas untuk melihat jadwal.</p>
+                </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <h3 className="text-xl font-bold mb-4">{t.kelas}: {selectedClass}</h3>
-                  <table className="w-full border-collapse min-w-[800px]">
+                  <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
+                    <h2 className="text-lg font-bold text-foreground">
+                      Jadwal Kelas: <span className="text-blue-700">{selectedClass}</span>
+                    </h2>
+                    <span className="text-xs font-bold text-muted-foreground bg-muted px-2.5 py-1 rounded-md">
+                      {groupedJadwal[selectedClass]?.length || 0} Jam Pelajaran
+                    </span>
+                  </div>
+
+                  <table className="w-full border-collapse min-w-[700px]">
                     <thead>
                       <tr>
-                        <th className="bg-background border border-border p-2 text-xs font-bold text-center">{t.periodHeader}</th>
-                        <th className="bg-background border border-border p-2 text-xs font-bold text-center">{t.timeHeader}</th>
-                        {days.map(day => <th key={day} className="bg-background border border-border p-2 text-xs font-bold">{day}</th>)}
+                        <th className="bg-muted border border-border p-2.5 text-xs font-bold text-center w-16">JP</th>
+                        <th className="bg-muted border border-border p-2.5 text-xs font-bold text-center w-28">Waktu</th>
+                        {days.map(day => (
+                          <th key={day} className="bg-muted border border-border p-2.5 text-xs font-bold text-center">
+                            {day}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {matrixRows.map((row, idx) => {
                         if (row.type === 'routine' || row.type === 'break') {
                           return (
-                            <tr key={`break-${idx}`} className="bg-background/80">
-                              <td className="border border-border p-1.5 text-center font-bold text-xs text-foreground/50">-</td>
-                              <td className="border border-border p-1.5 text-center font-bold text-[10px] text-foreground/50">{row.waktu}</td>
-                              <td colSpan={days.length} className="border border-border p-1.5 text-center font-bold text-xs text-foreground/50 italic bg-foreground/5">
+                            <tr key={`break-${idx}`} className="bg-muted/40">
+                              <td className="border border-border p-2 text-center font-bold text-xs text-muted-foreground">-</td>
+                              <td className="border border-border p-2 text-center font-bold text-[11px] text-muted-foreground">{row.waktu}</td>
+                              <td colSpan={days.length} className="border border-border p-2 text-center font-bold text-xs text-muted-foreground italic">
                                 {row.name}
                               </td>
                             </tr>
@@ -190,24 +279,47 @@ export default function SharedJadwalPage() {
 
                         return (
                           <tr key={`jp-${row.jam_ke}`}>
-                            <td className="border border-border p-2 text-center font-bold text-xs">{row.jam_ke}</td>
-                            <td className="border border-border p-2 text-center font-bold text-[10px]">{row.waktu}</td>
+                            <td className="border border-border p-2 text-center font-bold text-xs text-foreground bg-muted/20">
+                              {row.jam_ke}
+                            </td>
+                            <td className="border border-border p-2 text-center font-bold text-[11px] text-muted-foreground bg-muted/10">
+                              {row.waktu}
+                            </td>
                             {days.map((day, dayIndex) => {
                               const dayNumber = dayIndex + 1;
                               if (row.jam_ke === 1 && dayNumber === 1 && config.has_monday_ceremony) {
-                                return <td key={day} className="border border-border p-2 text-center text-xs font-bold italic text-foreground/70 bg-background/50">{t.ceremony}</td>;
+                                return (
+                                  <td key={day} className="border border-border p-2 text-center text-xs font-bold text-muted-foreground bg-muted/30">
+                                    Upacara Bendera
+                                  </td>
+                                );
                               }
 
-                              const item = groupedJadwal[selectedClass].find((j: any) => j.hari === dayNumber && j.jam_ke === row.jam_ke);
+                              const item = (groupedJadwal[selectedClass] || []).find(
+                                (j: any) => j.hari === dayNumber && j.jam_ke === row.jam_ke
+                              );
+
                               return (
                                 <td key={day} className="border border-border p-1.5 align-top">
                                   {item ? (
-                                    <div className="p-2 border rounded" style={{ backgroundColor: `${item.mapel?.color}20`, borderColor: `${item.mapel?.color}50`}}>
-                                      <div className="font-bold text-xs mb-1">{item.mapel?.nama}</div>
-                                      <div className="text-[10px] text-foreground/70">{item.guru?.nama}</div>
+                                    <div 
+                                      className="p-2 border rounded-lg text-left shadow-2xs"
+                                      style={{ 
+                                        backgroundColor: `${item.mapel?.color || '#3b82f6'}18`, 
+                                        borderColor: `${item.mapel?.color || '#3b82f6'}50`
+                                      }}
+                                    >
+                                      <div className="font-bold text-xs text-foreground leading-tight mb-1">
+                                        {item.mapel?.nama}
+                                      </div>
+                                      <div className="text-[11px] font-bold text-muted-foreground">
+                                        {item.guru?.nama}
+                                      </div>
                                     </div>
                                   ) : (
-                                    <div className="p-2 text-center text-[10px] text-foreground/20">{t.emptySlot}</div>
+                                    <div className="p-2 text-center text-[10px] font-medium text-muted-foreground/30">
+                                      -
+                                    </div>
                                   )}
                                 </td>
                               );
@@ -217,12 +329,22 @@ export default function SharedJadwalPage() {
                       })}
                     </tbody>
                   </table>
+
                 </div>
               )}
+
             </div>
           </div>
+
         </div>
-      </div>
+
+      </main>
+
+      {/* Footer */}
+      <footer className="text-center text-xs text-muted-foreground mt-8 print:hidden">
+        Dibuat dengan <span className="font-bold text-blue-700">Jadwale</span> — Platform Penjadwalan Sekolah Indonesia
+      </footer>
+
     </div>
   );
 }

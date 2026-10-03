@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Plus, Edit2, Trash2, Search, Users, ShieldCheck, Clock,
-  Loader2, CheckCircle, AlertCircle, X, CalendarX2, Check, UserCheck, Mail
+  Loader2, CheckCircle, AlertCircle, X, CalendarX2, Check, UserCheck, Mail, FileSpreadsheet
 } from 'lucide-react';
 import api from '../../../lib/axios';
 import AvailabilityModal from './components/AvailabilityModal';
+import ImportModal from '../../../components/ImportModal';
 import { useLanguageStore, TRANSLATIONS } from '../../../store/useLanguageStore';
 
 /* ─── Types ─── */
@@ -106,6 +107,7 @@ export default function GuruPage() {
   const [editingGuru, setEditingGuru] = useState<Guru | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [availabilityGuru, setAvailabilityGuru] = useState<Guru | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [form, setForm] = useState({ nama: '', nip: '' });
@@ -203,9 +205,14 @@ export default function GuruPage() {
           <h1 className="page-title">Manajemen Guru</h1>
           <p className="page-subtitle">Kelola master data tenaga pengajar dan verifikasi akun guru.</p>
         </div>
-        <button onClick={openAdd} className="btn btn-primary ml-auto">
-          <Plus size={16} /> Tambah Guru
-        </button>
+        <div className="flex gap-2 ml-auto">
+          <button onClick={() => setShowImportModal(true)} className="btn btn-secondary text-xs">
+            <FileSpreadsheet size={16} /> Bulk Import Guru
+          </button>
+          <button onClick={openAdd} className="btn btn-primary text-xs">
+            <Plus size={16} /> Tambah Guru
+          </button>
+        </div>
       </div>
 
       {/* Pending Teacher Verification Requests Alert */}
@@ -435,6 +442,13 @@ export default function GuruPage() {
       </AnimatePresence>
 
       <AvailabilityModal isOpen={!!availabilityGuru} onClose={() => setAvailabilityGuru(null)} guru={availabilityGuru} onSuccess={fetchGurus} />
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        entitas="guru"
+        title="Data Guru"
+        onSuccess={fetchGurus}
+      />
     </div>
   );
 }

@@ -601,3 +601,44 @@ div[data-nextjs-dialog-overlay],
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  nav, sidebar, header, footer, button, .btn, select, 
+  .modal-overlay, .z-50, .no-print, [role="dialog"],
+  .hidden-print {
+    display: none !important;
+  }
+
+  main, .w-full, .bg-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: avoid;
+  }
+
+  th, td {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+  }
+}
+

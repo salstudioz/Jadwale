@@ -36,8 +36,28 @@ export class JadwalProcessor extends WorkerHost {
       
       if (!config) throw new Error('Config sekolah tidak ditemukan');
 
-      this.gateway.sendProgress(id_sekolah, 10, 'Membersihkan jadwal lama...');
-      await this.prisma.jadwal.deleteMany({ where: { id_sekolah } });
+      this.gateway.sendProgress(id_sekolah, 10, 'Menyiapkan periode jadwal aktif...');
+      
+      // Get or create active periode
+      let activePeriode = await this.prisma.periodeJadwal.findFirst({
+        where: { id_sekolah, is_active: true },
+      });
+      if (!activePeriode) {
+        activePeriode = await this.prisma.periodeJadwal.create({
+          data: {
+            id_sekolah,
+            nama: 'Jadwal Utama (2026/2027)',
+            tahun_ajaran: '2026/2027',
+            semester: 'Ganjil',
+            is_active: true,
+          },
+        });
+      }
+      const activePeriodeId = activePeriode.id;
+
+      this.gateway.sendProgress(id_sekolah, 12, 'Membersihkan jadwal lama pada periode aktif...');
+      // Only delete jadwal for the active periode — preserve other periodes
+      await this.prisma.jadwal.deleteMany({ where: { id_sekolah, id_periode_jadwal: activePeriodeId } });
 
       this.gateway.sendProgress(id_sekolah, 15, 'Menyiapkan variabel CSP...');
       const startTimeMs = Date.now();
@@ -107,12 +127,11 @@ export class JadwalProcessor extends WorkerHost {
         return record ? record.jp : 6; // Default to 6
       };
 
-      // Availability check function
-      // (For MVP, we just check if the day is allowed. Precise time mapping requires calculating actual times)
+      // Availability check:
+      // GuruAvailability stores BLOCKED days (days the guru is NOT available).
+      // If a record exists for (id_guru, hari), the guru CANNOT teach on that day.
       const isGuruAvailable = (id_guru: number, hari: number) => {
-        const avails = availabilities.filter(a => a.id_guru === id_guru);
-        if (avails.length === 0) return true; // Available if no rules
-        return avails.some(a => a.hari === hari);
+        return !availabilities.some(a => a.id_guru === id_guru && a.hari === hari);
       };
 
       this.gateway.sendProgress(id_sekolah, 20, `Menyusun jadwal untuk ${kelasList.length} kelas dan ${totalTasks} blok pelajaran...`);
@@ -168,13 +187,14 @@ export class JadwalProcessor extends WorkerHost {
                 guruSchedule.add(`${task.id_guru}-${hari}-${assignedJam}`);
                 kelasSchedule.add(`${task.id_kelas}-${hari}-${assignedJam}`);
                 jadwalToInsert.push({
-                  id_sekolah,
-                  id_kelas: task.id_kelas,
-                  hari,
-                  jam_ke: assignedJam,
-                  id_mapel: task.id_mapel,
-                  id_guru: task.id_guru,
-                });
+                id_sekolah,
+                id_periode_jadwal: activePeriodeId,
+                id_kelas: task.id_kelas,
+                hari,
+                jam_ke: assignedJam,
+                id_mapel: task.id_mapel,
+                id_guru: task.id_guru,
+              });
               }
               taskAssigned = true;
             }

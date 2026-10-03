@@ -18,6 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       : payload.role || (payload.is_admin ? 'ADMIN_SEKOLAH' : 'TENAGA_PENDIDIK');
 
     return { 
+      id: payload.sub,
       userId: payload.sub, 
       email: payload.email, 
       id_sekolah: payload.id_sekolah, 

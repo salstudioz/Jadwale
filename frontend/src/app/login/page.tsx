@@ -146,6 +146,11 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.375rem' }}>
+                  <Link href="/lupa-password" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>
+                    Lupa Kata Sandi?
+                  </Link>
+                </div>
               </div>
 
               <button

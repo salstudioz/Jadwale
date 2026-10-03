@@ -54,6 +54,12 @@ export class ShareService {
       data: { view_count: { increment: 1 } }
     }).catch(e => console.error(e));
 
+    const config = await this.prisma.schoolConfig.findUnique({ where: { id_sekolah: link.id_sekolah } });
+    const routines = await this.prisma.routineActivity.findMany({ 
+      where: { id_sekolah: link.id_sekolah }, 
+      orderBy: { time_before_jp: 'asc' } 
+    });
+
     const where: any = { id_sekolah: link.id_sekolah };
     if (link.id_kelas) where.id_kelas = link.id_kelas;
 
@@ -68,6 +74,13 @@ export class ShareService {
         id: link.sekolah.id,
         nama: link.sekolah.nama_sekolah
       },
+      config: config || {
+        start_time: '1970-01-01T07:00:00.000Z',
+        duration_per_jp: 45,
+        school_days: 5,
+        has_monday_ceremony: true,
+      },
+      routines: routines || [],
       permission: link.permission,
       jadwal
     };

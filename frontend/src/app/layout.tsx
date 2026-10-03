@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
 import "./globals.css";
-
-const nunito = Nunito({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
@@ -45,7 +42,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className={`${nunito.className} min-h-screen flex flex-col bg-background text-foreground`}>
+      <body className="font-sans min-h-screen flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <Navigation>
             {children}

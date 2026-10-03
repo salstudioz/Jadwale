@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
@@ -73,6 +74,26 @@ export class AuthService {
         is_verified: user.is_verified,
         sekolah: user.sekolah
       }
+    };
+  }
+
+  async getMe(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { sekolah: true, guru: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException('User tidak ditemukan');
+    }
+    const { password, ...result } = user;
+    const role = (user.email === 'superadmin@jadwale.id' || user.role === 'SUPER_ADMIN')
+      ? 'SUPER_ADMIN'
+      : user.role || (user.is_admin ? 'ADMIN_SEKOLAH' : 'TENAGA_PENDIDIK');
+
+    return {
+      ...result,
+      role,
+      is_admin: user.is_admin || role === 'ADMIN_SEKOLAH' || role === 'SUPER_ADMIN',
     };
   }
 
@@ -200,6 +221,79 @@ export class AuthService {
     });
 
     return this.login(user);
+  }
+
+  async forgotPassword(email: string) {
+    if (!email) {
+      throw new BadRequestException('Email wajib diisi.');
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (!user) {
+      return {
+        success: true,
+        message: 'Jika email Anda terdaftar, petunjuk reset password telah dikirimkan.'
+      };
+    }
+
+    const resetToken = uuidv4();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        reset_token: resetToken,
+        reset_token_expires: expiresAt,
+      }
+    });
+
+    return {
+      success: true,
+      message: 'Petunjuk reset password telah dibuat.',
+      resetToken,
+      resetUrl: `/reset-password?token=${resetToken}`
+    };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    if (!token || !newPassword) {
+      throw new BadRequestException('Token dan password baru wajib diisi.');
+    }
+
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Password minimal harus 6 karakter.');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        reset_token: token,
+        reset_token_expires: { gte: new Date() }
+      }
+    });
+
+    if (!user) {
+      throw new BadRequestException('Tautan reset password tidak valid atau telah kedaluwarsa.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        reset_token: null,
+        reset_token_expires: null,
+      }
+    });
+
+    return {
+      success: true,
+      message: 'Password Anda berhasil diperbarui. Silakan login dengan password baru.'
+    };
   }
 }
 

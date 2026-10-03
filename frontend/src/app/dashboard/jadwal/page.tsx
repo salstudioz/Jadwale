@@ -6,6 +6,7 @@ import { io, Socket } from 'socket.io-client';
 import api from '../../../lib/axios';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useLanguageStore, TRANSLATIONS } from '../../../store/useLanguageStore';
+import ShareExportModal from '../../../components/ShareExportModal';
 
 export default function JadwalPage() {
   const lang = useLanguageStore((s) => s.lang);
@@ -197,7 +198,7 @@ export default function JadwalPage() {
     days = Array.from({ length: config.school_days }).map((_, i) => dayNames[i]);
     
     groupedJadwal = jadwal.reduce((acc: any, curr: any) => {
-      const kls = curr.kelas?.nama_kelas || 'Umum';
+      const kls = curr.kelas?.kode_lengkap || curr.kelas?.nama_kelas || 'Umum';
       if (!acc[kls]) acc[kls] = [];
       acc[kls].push(curr);
       return acc;
@@ -216,8 +217,9 @@ export default function JadwalPage() {
       return `${h}:${m}`;
     };
 
-    // Build timeline
-    let currentTime = new Date(config.start_time);
+    // Build timeline — fallback to 07:00 UTC if start_time is missing
+    const rawStartTime = config.start_time || '1970-01-01T07:00:00.000Z';
+    let currentTime = new Date(rawStartTime);
     const maxJamInSchedule = jadwal && jadwal.length > 0 ? Math.max(...jadwal.map((j: any) => j.jam_ke || 0)) : 0;
     const maxJp = Math.max(6, Math.min(10, maxJamInSchedule || 8));
     let jpCounter = 1;
@@ -489,9 +491,14 @@ export default function JadwalPage() {
                 <button onClick={() => setShowCode(true)} style={{ padding: '0.375rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', background: showCode ? 'var(--card)' : 'transparent', color: showCode ? 'var(--primary)' : 'var(--muted-foreground)' }}>Kode</button>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
-                <button onClick={() => setShowShareModal(true)} className="btn btn-secondary" style={{ fontSize: '0.8125rem', padding: '0.5rem 0.75rem' }}><Share2 size={14} /> <span className="hidden sm:inline">Bagikan</span></button>
-                <button onClick={() => { setExportType('excel'); setShowExportModal(true); }} className="btn btn-secondary" style={{ fontSize: '0.8125rem', padding: '0.5rem 0.75rem' }}><Download size={14} /> Excel</button>
-                <button onClick={() => { setExportType('pdf'); setShowExportModal(true); }} className="btn btn-secondary" style={{ fontSize: '0.8125rem', padding: '0.5rem 0.75rem' }}><Printer size={14} /> PDF</button>
+                <button 
+                  onClick={() => setShowShareModal(true)} 
+                  className="btn btn-primary" 
+                  style={{ fontSize: '0.8125rem', padding: '0.5rem 0.875rem', gap: '0.375rem' }}
+                >
+                  <Share2 size={14} /> 
+                  <span>Bagikan & Ekspor</span>
+                </button>
               </div>
             </div>
           </div>
@@ -677,113 +684,15 @@ export default function JadwalPage() {
         </div>
       )}
 
-      {/* Share Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4">Bagikan Jadwal</h3>
-              
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="text-sm font-bold text-foreground/70 block mb-2">Akses Publik</label>
-                  <select 
-                    value={shareAccess} 
-                    onChange={e => setShareAccess(e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg p-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="read">Hanya Lihat (Publik)</option>
-                    <option value="edit">Bisa Edit (Hanya user login terdaftar)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-bold text-foreground/70 block mb-2">Masa Berlaku</label>
-                  <select 
-                    value={shareDays} 
-                    onChange={e => setShareDays(Number(e.target.value))}
-                    className="w-full bg-background border border-border rounded-lg p-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value={7}>7 Hari</option>
-                    <option value={30}>30 Hari</option>
-                    <option value={90}>90 Hari</option>
-                  </select>
-                </div>
-              </div>
-
-              {shareLink ? (
-                <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg text-sm mb-4 font-bold text-primary break-all">
-                  {shareLink}
-                </div>
-              ) : (
-                <button 
-                  onClick={generateShareLink}
-                  className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-colors"
-                >
-                  Buat Link
-                </button>
-              )}
-            </div>
-            <div className="bg-background p-4 flex justify-end">
-              <button 
-                onClick={() => { setShowShareModal(false); setShareLink(''); }}
-                className="px-4 py-2 text-sm font-bold text-foreground/70 hover:bg-foreground/5 rounded-lg"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Export Modal */}
-      {showExportModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4">Ekspor ke {exportType === 'pdf' ? 'PDF' : 'Excel'}</h3>
-              
-              <div className="space-y-4 mb-6">
-                <label className="text-sm font-bold text-foreground/70 block">Pilih Template (PDF/Excel Styling)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Mock templates, normally fetched from API */}
-                  {[
-                    { id: 1, name: 'Sederhana (Gratis)', prem: false },
-                    { id: 2, name: 'Ceria (Gratis)', prem: false },
-                    { id: 3, name: 'Bintang (Premium)', prem: true },
-                    { id: 4, name: 'Pelangi (Premium)', prem: true }
-                  ].map(tpl => (
-                    <button
-                      key={tpl.id}
-                      onClick={() => setExportTemplate(tpl.id)}
-                      className={`p-3 text-left rounded-xl border text-sm font-bold transition-all ${
-                        exportTemplate === tpl.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background hover:border-primary/50 text-foreground'
-                      }`}
-                    >
-                      {tpl.name}
-                      {tpl.prem && <span className="block text-[10px] text-orange-500 mt-1 uppercase">Pro</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button 
-                onClick={handleExport}
-                className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-colors"
-              >
-                Download Sekarang
-              </button>
-            </div>
-            <div className="bg-background p-4 flex justify-end">
-              <button 
-                onClick={() => setShowExportModal(false)}
-                className="px-4 py-2 text-sm font-bold text-foreground/70 hover:bg-foreground/5 rounded-lg"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Unified Share & Export Modal */}
+      <ShareExportModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        namaSekolah={jadwalData?.config?.sekolah?.nama || user?.sekolah?.nama_sekolah || 'Sekolah'}
+        selectedPeriodeId={selectedPeriodeId}
+        kelasList={classesList}
+        currentClass={selectedClass}
+      />
 
     </div>
   );

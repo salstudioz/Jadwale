@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Edit2, Trash2, Search, BookOpen, Star,
-  Loader2, CheckCircle, AlertCircle, X,
+  Loader2, CheckCircle, AlertCircle, X, FileSpreadsheet,
 } from 'lucide-react';
 import api from '../../../lib/axios';
+import ImportModal from '../../../components/ImportModal';
 import { useLanguageStore, TRANSLATIONS } from '../../../store/useLanguageStore';
 
 const COLOR_PRESETS = [
@@ -22,6 +23,7 @@ export default function MapelPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [editingMapel, setEditingMapel] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -118,9 +120,14 @@ export default function MapelPage() {
           <h1 className="page-title">{t.actionMapelTitle}</h1>
           <p className="page-subtitle">{t.actionMapelDesc}</p>
         </div>
-        <button onClick={openAdd} className="btn btn-primary shrink-0">
-          <Plus size={16} /> {lang === 'en' ? 'Add Subject' : 'Tambah Mapel'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setImportModalOpen(true)} className="btn btn-secondary text-xs flex items-center gap-1.5">
+            <FileSpreadsheet size={15} /> Import Excel
+          </button>
+          <button onClick={openAdd} className="btn btn-primary text-xs">
+            <Plus size={16} /> {lang === 'en' ? 'Add Subject' : 'Tambah Mapel'}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -344,6 +351,14 @@ export default function MapelPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        entitas="mapel"
+        title="Mata Pelajaran"
+        onSuccess={fetchMapels}
+      />
     </div>
   );
 }

@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Plus, Edit2, Trash2, Search, GraduationCap, UserCheck,
-  Loader2, CheckCircle, AlertCircle, X,
+  Loader2, CheckCircle, AlertCircle, X, FileSpreadsheet,
 } from 'lucide-react';
 import api from '../../../lib/axios';
+import ImportModal from '../../../components/ImportModal';
 
 import { useLanguageStore, TRANSLATIONS } from '../../../store/useLanguageStore';
 
@@ -58,6 +59,7 @@ export default function KelasPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [editingKelas, setEditingKelas] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -175,9 +177,14 @@ export default function KelasPage() {
           <h1 className="page-title">{t.actionKelasTitle}</h1>
           <p className="page-subtitle">{t.actionKelasDesc}</p>
         </div>
-        <button onClick={openAdd} className="btn btn-primary ml-auto">
-          <Plus size={16} /> {lang === 'en' ? 'Add Class' : 'Tambah Kelas'}
-        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <button onClick={() => setImportModalOpen(true)} className="btn btn-secondary text-xs flex items-center gap-1.5">
+            <FileSpreadsheet size={15} /> Import Excel
+          </button>
+          <button onClick={openAdd} className="btn btn-primary text-xs">
+            <Plus size={16} /> {lang === 'en' ? 'Add Class' : 'Tambah Kelas'}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -334,6 +341,14 @@ export default function KelasPage() {
           </>
         )}
       </AnimatePresence>
+
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        entitas="kelas"
+        title="Kelas"
+        onSuccess={fetchData}
+      />
     </div>
   );
 }

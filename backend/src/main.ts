@@ -11,7 +11,7 @@ async function bootstrap() {
     origin: process.env.NODE_ENV === 'production' ? allowedOrigins : true,
     credentials: true,
   });
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 3001;
   await app.listen(port);
 }
 bootstrap();

@@ -7,10 +7,13 @@ import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 
+import { ExportService } from '../export/export.service';
+
 @Controller('api/jadwal')
 export class JadwalController {
   constructor(
     private readonly jadwalService: JadwalService,
+    private readonly exportService: ExportService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -19,6 +22,26 @@ export class JadwalController {
   @RequireAdmin()
   generate(@Request() req: any) {
     return this.jadwalService.generateJadwalAsync(req.user.id_sekolah);
+  }
+
+  @Post('generate/preview')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireAdmin()
+  generatePreview(@Request() req: any, @Body('periodeId') periodeId?: number) {
+    return this.jadwalService.generatePreview(req.user.id_sekolah, periodeId);
+  }
+
+  @Post('generate/commit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireAdmin()
+  commitDraft(@Request() req: any, @Body('periodeId') periodeId?: number) {
+    return this.jadwalService.commitDraft(req.user.id_sekolah, periodeId);
+  }
+
+  @Get('generate/status/:jobId')
+  @UseGuards(JwtAuthGuard)
+  getJobStatus(@Request() req: any, @Param('jobId') jobId: string) {
+    return this.jadwalService.getJobStatus(jobId, req.user.id_sekolah);
   }
 
   @Get()
@@ -70,18 +93,19 @@ export class JadwalController {
     const uuid = uuidv4();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + (body.days || 30));
+    const userId = req.user.id || req.user.userId;
 
     const link = await this.prisma.sharedLink.create({
       data: {
         id_sekolah: req.user.id_sekolah,
         uuid,
         permission: body.permission || 'read',
-        created_by: req.user.id,
+        created_by: userId,
         expires_at: expiresAt,
       }
     });
 
-    return { uuid: link.uuid };
+    return { uuid: link.uuid, url: `/share/${link.uuid}` };
   }
 
   @Get('share/:uuid')
@@ -93,44 +117,42 @@ export class JadwalController {
       throw new UnauthorizedException('Link sudah kadaluarsa');
     }
 
-    // Increement view count
+    // Increment view count
     await this.prisma.sharedLink.update({
       where: { uuid },
       data: { view_count: { increment: 1 } }
     });
 
     if (link.permission === 'edit') {
-      // Validate user login
       const token = req.headers.authorization?.split(' ')[1];
       if (!token) throw new UnauthorizedException('Silakan login untuk mengedit jadwal');
-      // For full security, we would decode token here or use an OptionalJwtGuard
-      // This is a minimal check for the walkthrough
     }
 
-    // Return the jadwal for this sekolah
     return this.jadwalService.findAll(link.id_sekolah);
   }
 
   @Get('export/excel')
   @UseGuards(JwtAuthGuard)
-  async exportExcel(@Request() req: any, @Res() res: Response, @Query('template') template?: string) {
-    const buffer = await this.jadwalService.exportExcel(req.user.id_sekolah, template ? parseInt(template) : 1);
+  async exportExcel(@Request() req: any, @Res() res: Response, @Query('periodeId') periodeId?: string) {
+    const pId = periodeId ? parseInt(periodeId, 10) : undefined;
+    const buffer = await this.exportService.generateExcel(req.user.id_sekolah, pId);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="Jadwal_Pelajaran.xlsx"',
-      'Content-Length': buffer.length,
+      'Content-Length': buffer.length.toString(),
     });
     res.end(buffer);
   }
 
   @Get('export/pdf')
   @UseGuards(JwtAuthGuard)
-  async exportPdf(@Request() req: any, @Res() res: Response, @Query('template') template?: string) {
-    const buffer = await this.jadwalService.exportPdf(req.user.id_sekolah, template ? parseInt(template) : 1);
+  async exportPdf(@Request() req: any, @Res() res: Response, @Query('periodeId') periodeId?: string) {
+    const pId = periodeId ? parseInt(periodeId, 10) : undefined;
+    const buffer = await this.exportService.generatePdf(req.user.id_sekolah, pId);
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': 'attachment; filename="Jadwal_Pelajaran.pdf"',
-      'Content-Length': buffer.length,
+      'Content-Length': buffer.length.toString(),
     });
     res.end(buffer);
   }

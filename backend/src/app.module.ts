@@ -12,15 +12,30 @@ import { ExportModule } from './export/export.module';
 import { ShareModule } from './share/share.module';
 import { AdminModule } from './admin/admin.module';
 import { TemplateModule } from './template/template.module';
-
+import { ImportModule } from './import/import.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
     BullModule.forRoot({
-      connection: new (require('ioredis-mock'))(),
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: Number(process.env.REDIS_PORT) || 6379,
+      },
     }),
-    PrismaModule, AuthModule, SekolahModule, GuruModule, KelasModule, MapelModule, JadwalModule, ExportModule, ShareModule, AdminModule, TemplateModule],
+    PrismaModule,
+    AuthModule,
+    SekolahModule,
+    GuruModule,
+    KelasModule,
+    MapelModule,
+    JadwalModule,
+    ExportModule,
+    ShareModule,
+    AdminModule,
+    TemplateModule,
+    ImportModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
